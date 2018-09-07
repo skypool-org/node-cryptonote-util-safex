@@ -32,6 +32,10 @@
 
 #include "abstract_tcp_server2.h"
 #include "http_protocol_handler.h"
+
+#undef SAFEX_DEFAULT_LOG_CATEGORY
+#define SAFEX_DEFAULT_LOG_CATEGORY "net.http"
+
 namespace epee
 {
 namespace net_utils

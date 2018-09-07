@@ -27,23 +27,36 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * ---------------------------------------------------------------------------
  */
-static const char _NR[] = {
-	0x4e,0x61,0x62,0x69,0x6c,0x20,0x53,0x2e,0x20,
-	0x41,0x6c,0x20,0x52,0x61,0x6d,0x6c,0x69,0x00 };
-
 #include <stddef.h>
 #include <time.h> 
-#include <sys/timeb.h>
-#include <malloc.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+// OS X, FreeBSD, and OpenBSD don't need malloc.h
+#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) \
+  && !defined(__DragonFly__)
+ #include <malloc.h>
+#endif
+
+// ANDROID, FreeBSD, and OpenBSD also don't need timeb.h
+#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__ANDROID__)
+ #include <sys/timeb.h>
+#else
+ #include <sys/time.h>
+#endif
 
 #ifdef WIN32
 #include <process.h>
 #else
 #include <sys/types.h>
 #include <unistd.h>
+#endif
+
+#ifdef _MSC_VER
+#define GETPID() _getpid()
+#else
+#define GETPID() getpid()
 #endif
 
 #include "oaes_config.h"
@@ -63,31 +76,6 @@ static const char _NR[] = {
 #ifndef min
 # define min(a,b) (((a)<(b)) ? (a) : (b))
 #endif /* min */
-
-typedef struct _oaes_key
-{
-	size_t data_len;
-	uint8_t *data;
-	size_t exp_data_len;
-	uint8_t *exp_data;
-	size_t num_keys;
-	size_t key_base;
-} oaes_key;
-
-typedef struct _oaes_ctx
-{
-#ifdef OAES_HAVE_ISAAC
-  randctx * rctx;
-#endif // OAES_HAVE_ISAAC
-
-#ifdef OAES_DEBUG
-	oaes_step_cb step_cb;
-#endif // OAES_DEBUG
-
-	oaes_key * key;
-	OAES_OPTION options;
-	uint8_t iv[OAES_BLOCK_SIZE];
-} oaes_ctx;
 
 // "OAES<8-bit header version><8-bit type><16-bit options><8-bit flags><56-bit reserved>"
 static uint8_t oaes_header[OAES_BLOCK_SIZE] = {
@@ -485,6 +473,7 @@ OAES_RET oaes_sprintf(
 #ifdef OAES_HAVE_ISAAC
 static void oaes_get_seed( char buf[RANDSIZ + 1] )
 {
+        #if !defined(__FreeBSD__) && !defined(__OpenBSD__)
 	struct timeb timer;
 	struct tm *gmTimer;
 	char * _test = NULL;
@@ -495,14 +484,28 @@ static void oaes_get_seed( char buf[RANDSIZ + 1] )
 	sprintf( buf, "%04d%02d%02d%02d%02d%02d%03d%p%d",
 		gmTimer->tm_year + 1900, gmTimer->tm_mon + 1, gmTimer->tm_mday,
 		gmTimer->tm_hour, gmTimer->tm_min, gmTimer->tm_sec, timer.millitm,
-		_test + timer.millitm, getpid() );
+		_test + timer.millitm, GETPID() );
+	#else
+	struct timeval timer;
+	struct tm *gmTimer;
+	char * _test = NULL;
 	
+	gettimeofday(&timer, NULL);
+	gmTimer = gmtime( &timer.tv_sec );
+	_test = (char *) calloc( sizeof( char ), timer.tv_usec/1000 );
+	sprintf( buf, "%04d%02d%02d%02d%02d%02d%03d%p%d",
+		gmTimer->tm_year + 1900, gmTimer->tm_mon + 1, gmTimer->tm_mday,
+		gmTimer->tm_hour, gmTimer->tm_min, gmTimer->tm_sec, timer.tv_usec/1000,
+		_test + timer.tv_usec/1000, GETPID() );
+	#endif
+		
 	if( _test )
 		free( _test );
 }
 #else
 static uint32_t oaes_get_seed(void)
 {
+        #if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__ANDROID__)
 	struct timeb timer;
 	struct tm *gmTimer;
 	char * _test = NULL;
@@ -513,7 +516,20 @@ static uint32_t oaes_get_seed(void)
 	_test = (char *) calloc( sizeof( char ), timer.millitm );
 	_ret = gmTimer->tm_year + 1900 + gmTimer->tm_mon + 1 + gmTimer->tm_mday +
 			gmTimer->tm_hour + gmTimer->tm_min + gmTimer->tm_sec + timer.millitm +
-			(uintptr_t) ( _test + timer.millitm ) + getpid();
+			(uintptr_t) ( _test + timer.millitm ) + GETPID();
+	#else
+	struct timeval timer;
+	struct tm *gmTimer;
+	char * _test = NULL;
+	uint32_t _ret = 0;
+	
+	gettimeofday(&timer, NULL);
+	gmTimer = gmtime( &timer.tv_sec );
+	_test = (char *) calloc( sizeof( char ), timer.tv_usec/1000 );
+	_ret = gmTimer->tm_year + 1900 + gmTimer->tm_mon + 1 + gmTimer->tm_mday +
+			gmTimer->tm_hour + gmTimer->tm_min + gmTimer->tm_sec + timer.tv_usec/1000 +
+			(uintptr_t) ( _test + timer.tv_usec/1000 ) + GETPID();
+	#endif
 
 	if( _test )
 		free( _test );
@@ -630,7 +646,10 @@ static OAES_RET oaes_key_gen( OAES_CTX * ctx, size_t key_size )
 	_key->data = (uint8_t *) calloc( key_size, sizeof( uint8_t ));
 	
 	if( NULL == _key->data )
+	{
+		free( _key );
 		return OAES_RET_MEM;
+	}
 	
 	for( _i = 0; _i < key_size; _i++ )
 #ifdef OAES_HAVE_ISAAC

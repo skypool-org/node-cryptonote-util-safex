@@ -32,6 +32,9 @@
 #include <atlutil.h>
 #pragma comment(lib, "Wininet.lib")
 
+#undef SAFEX_DEFAULT_LOG_CATEGORY
+#define SAFEX_DEFAULT_LOG_CATEGORY "net.http"
+
 namespace epee
 {
 namespace net_utils
