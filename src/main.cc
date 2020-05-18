@@ -38,8 +38,6 @@ blobdata uint64be_to_blob(uint64_t num) {
 
 NAN_METHOD(convert_blob) {
 
-    //std::cout << "convert_blob called" <<std::endl;
-
     if (info.Length() < 1)
         THROW_ERROR_EXCEPTION("You must provide one argument.");
 
@@ -53,10 +51,7 @@ NAN_METHOD(convert_blob) {
     //convert
     block b = AUTO_VAL_INIT(b);
 
-    std::cout << "Checkpoint convert_blob 2" << std::endl;
-
     if (!parse_and_validate_block_from_blob(input, b)) {
-        std::cout << "Checkpoint convert_blob 2.5 parse_and_validate_block_from_blob FAILED" << std::endl;
         THROW_ERROR_EXCEPTION("Failed to parse block");
         return;
     }
@@ -69,13 +64,9 @@ NAN_METHOD(convert_blob) {
     info.GetReturnValue().Set(
         returnValue
     );
-
-    std::cout << "Checkpoint convert_blob 6" << std::endl;      
 }
 
 NAN_METHOD(get_block_id) {
-
-    //std::cout << "get_block_id called" <<std::endl;
 
     if (info.Length() < 1)
         THROW_ERROR_EXCEPTION("You must provide one argument.");
@@ -104,8 +95,6 @@ NAN_METHOD(get_block_id) {
 }
 
 NAN_METHOD(construct_block_blob) {
-
-    //std::cout << "construct_block_blob called" <<std::endl;
 
     if (info.Length() < 2)
         THROW_ERROR_EXCEPTION("You must provide two arguments.");
@@ -140,8 +129,6 @@ NAN_METHOD(construct_block_blob) {
 }
 
 NAN_METHOD(address_decode) {
-
-    //std::cout << "address_decode called" <<std::endl;
 
     if (info.Length() < 1)
         THROW_ERROR_EXCEPTION("You must provide one argument.");
