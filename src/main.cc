@@ -70,7 +70,7 @@ NAN_METHOD(convert_blob) {
         returnValue
     );
 
-    std::cout << "Checkpoint convert_blob 6" << std::endl;      
+    std::cout << "Checkpoint convert_blob 6" << std::endl;
 }
 
 NAN_METHOD(get_block_id) {

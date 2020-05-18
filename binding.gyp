@@ -1,7 +1,7 @@
 {
     "targets": [
         {
-            "target_name": "cryptonote",
+            "target_name": "cryptonote-safex",
             "sources": [
                 "src/main.cc",
                 "src/cryptonote_basic/cryptonote_format_utils.cpp",
@@ -66,7 +66,7 @@
                   "-fstack-protector-strong",
                   "-fno-strict-aliasing",
                   "-O2"
-                  
+
             ],
         }
     ]
